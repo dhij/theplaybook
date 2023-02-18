@@ -2,19 +2,19 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://dhij.github.io/theplaybook/docs/</loc>
+    <loc>http://theplaybook.dev/docs/</loc>
     <lastmod>2023-02-17T22:52:17-05:00</lastmod>
   </url><url>
-    <loc>https://dhij.github.io/theplaybook/docs/test/</loc>
+    <loc>http://theplaybook.dev/docs/test/</loc>
     <lastmod>2023-02-17T22:52:17-05:00</lastmod>
   </url><url>
-    <loc>https://dhij.github.io/theplaybook/</loc>
+    <loc>http://theplaybook.dev/</loc>
     <lastmod>2023-02-17T22:52:17-05:00</lastmod>
   </url><url>
-    <loc>https://dhij.github.io/theplaybook/archives/</loc>
+    <loc>http://theplaybook.dev/archives/</loc>
   </url><url>
-    <loc>https://dhij.github.io/theplaybook/categories/</loc>
+    <loc>http://theplaybook.dev/categories/</loc>
   </url><url>
-    <loc>https://dhij.github.io/theplaybook/tags/</loc>
+    <loc>http://theplaybook.dev/tags/</loc>
   </url>
 </urlset>
