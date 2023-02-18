@@ -1,4 +1,4 @@
-baseURL: "https://dhij.github.io/theplaybook/" 
+baseURL: "http://theplaybook.dev/" 
 languageCode: en-us
 title: theplaybook
 theme: PaperMod 
