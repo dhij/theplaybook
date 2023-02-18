@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Checkout destination
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.ref == 'refs/heads/main'
         with:
           ref: gh-pages
@@ -32,7 +32,7 @@ jobs:
           cp -R public/* ${GITHUB_WORKSPACE}/built-site/
           cd ${GITHUB_WORKSPACE}/built-site
           git add .
-          git config user.name 'Kubernetes Engineering'
-          git config user.email 'eng-container@digitalocean.com'
+          git config user.name 'dhij'
+          git config user.email 'davidhwang.ij@gmail.com'
           git commit -m 'Updated site'
           git push
