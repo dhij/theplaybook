@@ -4,5 +4,11 @@
 
 .post-content pre code {
     padding: 20px !important;
+    background: rgb(245, 245, 245) !important;
+    color: black;
 }
 
+.highlight > pre {
+    background-color: var(--code-bg) !important;
+    border-radius: 8px;
+}
