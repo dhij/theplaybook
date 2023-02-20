@@ -6,7 +6,17 @@
     <description>Recent content in Docs on theplaybook</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 17 Feb 2023 22:52:17 -0500</lastBuildDate><atom:link href="http://theplaybook.dev/docs/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 19 Feb 2023 11:42:25 -0500</lastBuildDate><atom:link href="http://theplaybook.dev/docs/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Deploying Hugo to Github Pages via Custom Github Actions</title>
+      <link>http://theplaybook.dev/docs/deploy-hugo-to-github-pages/</link>
+      <pubDate>Sun, 19 Feb 2023 11:42:25 -0500</pubDate>
+      
+      <guid>http://theplaybook.dev/docs/deploy-hugo-to-github-pages/</guid>
+      <description>This post provides a step-by-step guide on how you can set up Hugo, configure Github Actions to publish to Github Pages, and link custom domain to your Github Pages.
+Set up Hugo Install Hugo and Create a New Site brew install hugo hugo new site theplaybook -f yml Install Hugo with Homebrew Run hugo new site &amp;lt;site_name&amp;gt;. This will create a directory &amp;lt;site_name&amp;gt; containing the hugo templates. Pass in the optional -f yml option to override the default toml files used for configuration.</description>
+    </item>
+    
     <item>
       <title>Test</title>
       <link>http://theplaybook.dev/docs/test/</link>
