@@ -2,9 +2,13 @@
 title: "Deploying Hugo to Github Pages via Custom Github Actions"
 date: 2023-02-19T11:42:25-05:00
 draft: false
+tags: ["hugo", "github actions", "github pages"]
+categories: ["tutorial"]
 ---
 
 This post provides a step-by-step guide on how you can set up Hugo, configure Github Actions to publish to Github Pages, and link custom domain to your Github Pages.
+
+<!--more-->
 
 ### Set up Hugo
 
@@ -44,6 +48,12 @@ git submodule add --depth=1 https://github.com/adityatelange/hugo-PaperMod.git t
 
 - We will install the PaperMod theme. Use the two commands above from the instructions [here](https://github.com/adityatelange/hugo-PaperMod/wiki/Installation)
 - Or choose a theme from the [hugo themes](https://themes.gohugo.io/)
+
+```yaml
+theme: PaperMod
+```
+
+- Add `theme: PaperMod` to your config.yml
 
 ### Configure Github Actions to Publish to the Github Pages
 
@@ -114,13 +124,14 @@ Note: the content will be deployed to `https://<username>.github.io/<repository_
 ### Link Custom Domain to Github Pages
 
 - Purchase your domain from the DNS provider such as [Namecheap](https://www.namecheap.com/) and [GoDaddy](https://www.godaddy.com/)
-  ![Image](/docs/github_pages_custom_domain.jpg)
+
+![Github Pages Custom Domain](/docs/github_pages_custom_domain.jpg#left)
 
 - Add your custom domain under your Git repository's Settings > Pages > Custom Domain as shown in the image above.
 
 Note: the DNS check will initially be unsuccessful
 
-![Image](/docs/namecheap_dns_records.jpg)
+![Namecheap DNS Records](/docs/namecheap_dns_records.jpg#left)
 
 - Configure an apex domain by adding IP addresses for Github Pages as instructed [here](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain). As recommended there, set up a `www` subdomain as well by creating a CNAME record that points to `<username>.github.io`. If you are using Namecheap, you will have records that look something like the image above. The instructions are available [here](https://www.namecheap.com/support/knowledgebase/article.aspx/9645/2208/how-do-i-link-my-domain-to-github-pages/)
 
@@ -128,6 +139,6 @@ Note: the DNS check will initially be unsuccessful
 baseurl: "http://theplaybook.dev/"
 ```
 
-- Update the baseurl in config.yml with your domain
+- Update the baseurl in config.yml with your domain. Please note that the HTTPS is enforced through Github Pages
 
 Once the commit for the baseurl change is pushed, the Github Action will run the deploy job and you should be able to access the site via your custom domain. It might take some time for your DNS provider to update your domain and the newly-created records to take effect.
