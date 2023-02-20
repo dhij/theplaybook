@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>Docs on theplaybook</title>
-    <link>http://theplaybook.dev/docs/</link>
-    <description>Recent content in Docs on theplaybook</description>
+    <title>tutorial on theplaybook</title>
+    <link>http://theplaybook.dev/categories/tutorial/</link>
+    <description>Recent content in tutorial on theplaybook</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 19 Feb 2023 11:42:25 -0500</lastBuildDate><atom:link href="http://theplaybook.dev/docs/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 19 Feb 2023 11:42:25 -0500</lastBuildDate><atom:link href="http://theplaybook.dev/categories/tutorial/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Deploying Hugo to Github Pages via Custom Github Actions</title>
       <link>http://theplaybook.dev/docs/deploy-hugo-to-github-pages/</link>
