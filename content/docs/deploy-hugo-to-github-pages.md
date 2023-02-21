@@ -1,5 +1,5 @@
 ---
-title: "Deploying Hugo to Github Pages via Custom Github Actions"
+title: "Deploying a Blog Powered by Hugo to Github Pages w/ Custom Domain via Github Actions"
 date: 2023-02-19T11:42:25-05:00
 draft: false
 tags: ["hugo", "github actions", "github pages"]
@@ -7,6 +7,8 @@ categories: ["tutorial"]
 ---
 
 This post provides a step-by-step guide on how you can create this blog powered by Hugo, configure Github Actions to publish to Github Pages, and link custom domain to your Github Pages.
+
+This guide is also available on Youtube [here](https://www.youtube.com/watch?v=_QSr2_pxIJs&ab_channel=dhij).
 
 <!--more-->
 
