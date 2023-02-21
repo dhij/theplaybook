@@ -13,7 +13,7 @@
       <pubDate>Sun, 19 Feb 2023 11:42:25 -0500</pubDate>
       
       <guid>http://theplaybook.dev/docs/deploy-hugo-to-github-pages/</guid>
-      <description>&lt;p&gt;This post provides a step-by-step guide on how you can set up Hugo, configure Github Actions to publish to Github Pages, and link custom domain to your Github Pages.&lt;/p&gt;</description>
+      <description>&lt;p&gt;This post provides a step-by-step guide on how you can create this blog powered by Hugo, configure Github Actions to publish to Github Pages, and link custom domain to your Github Pages.&lt;/p&gt;</description>
     </item>
     
   </channel>
