@@ -6,7 +6,7 @@ tags: ["hugo", "github actions", "github pages"]
 categories: ["tutorial"]
 ---
 
-This post provides a step-by-step guide on how you can set up Hugo, configure Github Actions to publish to Github Pages, and link custom domain to your Github Pages.
+This post provides a step-by-step guide on how you can create this blog powered by Hugo, configure Github Actions to publish to Github Pages, and link custom domain to your Github Pages.
 
 <!--more-->
 
@@ -32,20 +32,22 @@ baseurl:
 
 ```bash
 hugo new docs/test.md
-hugo server
 ```
 
 - Create a new page with `hugo new <filename>`
 - Open the test.md file and set `draft: false`; otherwise the page will not render
-- Run `hugo server` to run the application locally on `localhost:1313`
+- Add random content in the test.md file
+- You can run `hugo server` to run the application locally on `localhost:1313` but it might throw a layout error at the moment without any theme
 
 #### Install theme
 
 ```bash
+git init
 git clone https://github.com/adityatelange/hugo-PaperMod themes/PaperMod --depth=1
 git submodule add --depth=1 https://github.com/adityatelange/hugo-PaperMod.git themes/PaperMod
 ```
 
+- Run `git init` on the root of the project to initialize a Git repository
 - We will install the PaperMod theme. Use the two commands above from the instructions [here](https://github.com/adityatelange/hugo-PaperMod/wiki/Installation)
 - Or choose a theme from the [hugo themes](https://themes.gohugo.io/)
 
@@ -61,13 +63,26 @@ theme: PaperMod
 
 ```bash
 echo "# README" >> README.md
-git init
 git add README.md
 git commit -m "first commit"
 git branch -M main
 git remote add origin <path_to_your_git_repo>
 git push -u origin main
 ```
+
+- Create a repository on Github, create a readme file, add the remote address, and push your first commit
+
+#### Manually Add the gh-pages Branch
+
+![gh-pages branch](/docs/gh-pages-branch.jpg)
+
+- Manually add the gh-pages branch to the repository; otherwise the github actions will throw an error
+
+#### Allow Read and Write Permissions on the Workflow
+
+![Github Actions permissions](/docs/actions_permission.jpg)
+
+- Allow read and write permissions under Settings > Actions > General > Workflow permissions
 
 #### Add a .github/workflows/deploy.yml file under the project root directory
 
