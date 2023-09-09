@@ -6,7 +6,17 @@
     <description>Recent content on theplaybook</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 19 Feb 2023 11:42:25 -0500</lastBuildDate><atom:link href="http://theplaybook.dev/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 09 Sep 2023 13:51:42 -0400</lastBuildDate><atom:link href="http://theplaybook.dev/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Demystifying Goroutines - Channels, WaitGroup, Cancellation</title>
+      <link>http://theplaybook.dev/docs/goroutines/</link>
+      <pubDate>Sat, 09 Sep 2023 13:51:42 -0400</pubDate>
+      
+      <guid>http://theplaybook.dev/docs/goroutines/</guid>
+      <description>If you have rough ideas on how goroutines work but never took the time to learn the idiomatic approach and why we want to run goroutines certain way, this blog will be of help. In this post, I will be summarizing what I have learned from Chapter 8: Goroutines and Channels of the Go Programming Language book as well as The Go Blog on Go Concurrency Patterns.
+This blog post will be helpful if you are not familiar with any of the below:</description>
+    </item>
+    
     <item>
       <title>Deploying a Blog Powered by Hugo to Github Pages w/ Custom Domain via Github Actions</title>
       <link>http://theplaybook.dev/docs/deploy-hugo-to-github-pages/</link>

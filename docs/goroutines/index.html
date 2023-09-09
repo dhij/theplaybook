@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Demystifying Goroutines - Channels, WaitGroup, Cancellation | theplaybook</title>
+<meta name="keywords" content="golang, goroutine, go channel">
+<meta name="description" content="If you have rough ideas on how goroutines work but never took the time to learn the idiomatic approach and why we want to run goroutines certain way, this blog will be of help. In this post, I will be summarizing what I have learned from Chapter 8: Goroutines and Channels of the Go Programming Language book as well as The Go Blog on Go Concurrency Patterns.
+This blog post will be helpful if you are not familiar with any of the below:">
+<meta name="author" content="David Hwang">
+<link rel="canonical" href="http://theplaybook.dev/docs/goroutines/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.7338c67a307b96719cd9e7ab779c1e1c847f9dac341194285130c9f6849c00d3.css" integrity="sha256-czjGejB7lnGc2eerd5weHIR/naw0EZQoUTDJ9oScANM=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.f413e19d0714851f6474e7ee9632408e58ac146fbdbe62747134bea2fa3415e0.js" integrity="sha256-9BPhnQcUhR9kdOfuljJAjlisFG&#43;9vmJ0cTS&#43;ovo0FeA="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="http://theplaybook.dev/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://theplaybook.dev/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://theplaybook.dev/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://theplaybook.dev/apple-touch-icon.png">
+<link rel="mask-icon" href="http://theplaybook.dev/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="Demystifying Goroutines - Channels, WaitGroup, Cancellation" />
+<meta property="og:description" content="If you have rough ideas on how goroutines work but never took the time to learn the idiomatic approach and why we want to run goroutines certain way, this blog will be of help. In this post, I will be summarizing what I have learned from Chapter 8: Goroutines and Channels of the Go Programming Language book as well as The Go Blog on Go Concurrency Patterns.
+This blog post will be helpful if you are not familiar with any of the below:" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://theplaybook.dev/docs/goroutines/" /><meta property="article:section" content="docs" />
+<meta property="article:published_time" content="2023-09-09T13:51:42-04:00" />
+<meta property="article:modified_time" content="2023-09-09T13:51:42-04:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Demystifying Goroutines - Channels, WaitGroup, Cancellation"/>
+<meta name="twitter:description" content="If you have rough ideas on how goroutines work but never took the time to learn the idiomatic approach and why we want to run goroutines certain way, this blog will be of help. In this post, I will be summarizing what I have learned from Chapter 8: Goroutines and Channels of the Go Programming Language book as well as The Go Blog on Go Concurrency Patterns.
+This blog post will be helpful if you are not familiar with any of the below:"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Docs",
+      "item": "http://theplaybook.dev/docs/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Demystifying Goroutines - Channels, WaitGroup, Cancellation",
+      "item": "http://theplaybook.dev/docs/goroutines/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Demystifying Goroutines - Channels, WaitGroup, Cancellation",
+  "name": "Demystifying Goroutines - Channels, WaitGroup, Cancellation",
+  "description": "If you have rough ideas on how goroutines work but never took the time to learn the idiomatic approach and why we want to run goroutines certain way, this blog will be of help. In this post, I will be summarizing what I have learned from Chapter 8: Goroutines and Channels of the Go Programming Language book as well as The Go Blog on Go Concurrency Patterns.\nThis blog post will be helpful if you are not familiar with any of the below:",
+  "keywords": [
+    "golang", "goroutine", "go channel"
+  ],
+  "articleBody": "If you have rough ideas on how goroutines work but never took the time to learn the idiomatic approach and why we want to run goroutines certain way, this blog will be of help. In this post, I will be summarizing what I have learned from Chapter 8: Goroutines and Channels of the Go Programming Language book as well as The Go Blog on Go Concurrency Patterns.\nThis blog post will be helpful if you are not familiar with any of the below:\nHow to wait for the other goroutines to finish instead of exiting on the main goroutine Unbuffered vs. buffered channels and the pros \u0026 cons of each Running loops in parallel (goroutines inside the loop) Unbounded parallelism \u0026 semaphores Multiplexing with select \u0026 goroutine cancellation We will also answer some of the questions such as:\nWhat is a goroutine leak and how do we prevent it? Do we need to close all the channels and goroutines? Why do we want to have our waitGroup in its own goroutine? You should already know that a goroutine is an activity of a concurrent Go program and channel is a communicating mechanism between the goroutines. We all wish running a concurrent program is as simple as prepending go to a method. However, there is often a little more we need to make goroutines work as intended. Let’s have a look at different use cases starting from the first bullet point on the list above.\nHow to wait for other goroutines to finish instead of exiting on the main goroutine func main() { // ... done := make(chan struct{}) go func() { // ... done \u003c- struct{}{} // signal the main goroutine }() // ... \u003c- done // wait for background goroutine to finish } In the code snippet above, we define an unbuffered channel called done. The channel is unbuffered because we are not assigning any capacity/size to the channel. We will take a look at buffered channels in another example later. The main characteristic of an unbuffered channel is that it blocks until another goroutine executes a corresponding receive on the same channel, causing the sending and receiving goroutines to be “synchronous”. With the unbuffered channel in the example above, we can ensure that the program waits for the background goroutine to finish before exiting. You can find the code example from the book here.\nUnbuffered vs. buffered channels Let’s have a look at an example from the book where an unbuffered channel might lead to a problem.\nfunc mirroredQuery() string { responses := make(chan string) go func() { responses \u003c- \"response 1\" }() go func() { responses \u003c- \"response 2\" }() go func() { responses \u003c- \"response 3\" }() return \u003c-responses // return the quickest response } With unbuffered channels, there might be a scenario like the above where the two slower goroutines (as to which of the three would be the fastest is non-deterministic) would be stuck trying to send their responses on a channel from which no goroutine will ever receive. This is known as a goroutine leak and it is important to ensure that the goroutines terminate themselves when no longer needed since leaked goroutines are not automatically collected.\nHowever, we would not encounter a goroutine leak if we use a buffered channel instead as such: responses := make(chan string, 3) where we assign a capacity of 3 to the channel. That buffered channel would hold up to three string values and block until a space is made available by another goroutine’s receive. And even if the sending channel closes, the values queued up in the channel can be handled later by the receiving channels.\nAlthough unbuffered channels provide stronger synchronization guarantees, it would require prudence on our end to avoid goroutine leaks. If the synchronization does not matter as much and you know the upper bound on the number of values that will be sent on the channel, a buffered channel could be a better option. However, it is worth noting that failure to allocate sufficient buffer capacity would cause the program to deadlock.\nAs we looked at an example of a goroutine leak, you might have also wondered if we have to close all the channels as well. The answer is that you do not need to close every channel unless it is important to tell the receiving goroutines that all data have been sent. Channels that the garbage collector determines to be unreachable will have its resources reclaimed whether or not it is closed. However, closing an already-closed channel causes a panic, as does closing a nil channel.\nRunning loops in parallel At first glance, looping in parallel might appear to be as simple as:\nfunc parallelLoop() { for _, f := range filenames { go func(f string) { // ... }(f) } } However, when you run the function above, you will observe that the function exits almost immediately. The above doesn’t work because parallelLoop() returns before it has finished all its work. We have to change the inner goroutine to report its completion to the outer goroutine by sending an event on a shared channel as below:\nfunc parallelLoop() { ch := make(chan struct{}) for _, f := range filenames { go func(f string) { // ... ch \u003c- struct{}{} }(f) } for range filenames { \u003c-ch } } One other thing worth highlighting is that the f is passed into the goroutine as an explicit argument as such: go func(f string){...}(f) and not directly used in the goroutine. Explicit parameters are used for goroutines in a loop to ensure that we use the value of f that is current when the go statement is executed.\nHowever, the above example does not take error handling into consideration. Now let’s have a look at the idiomatic approach to looping in parallel using the sync.WaitGroup and handling errors appropriately:\nfunc makeThumbnails(filesnames \u003c-chan string) int64 { sizes := make(chan int64) var wg sync.WaitGroup for f := range filenames { wg.Add(1) go func(f string) { defer wg.Done() // run operations to retrieve the size of the file sizes \u003c- size }(f) } // closer go func() { wg.Wait() close(sizes) } var total int64 for size := range sizes { total += size } return total } Above is a snippet of code where we retrieve the size of different files in parallel and compute the total size. The example used in the book can be found here. There are a few things we want to pay attention from the above:\nwg.Add(1) must be called before the worker goroutine starts, not within it—this ensures that the Add happens before the closer goroutine calls Wait defer is used on wg.Done() to ensure that Done is called even in the error cases The closer goroutine that waits for the workers must be created before the closing of the sizes channel The closer goroutine must be concurrent with the loop over sizes If the wait operation was placed before the loop in the main goroutine: it would never end If the wait operation was placed after the loop in the main goroutine: the loop would never terminate because there is nothing closing the sizes channel and the wait operation will be unreachable Unbounded parallelism If there is a limiting factor in the system, such as the number of CPU cores, the number of spindles and heads for local disk I/O operations, or the bandwidth of the network, we want to limit the number of parallel uses of the resource to match the level of parallelism that is available.\nWe can limit parallelism using a buffered channel of capacity n to model a concurrency primitive called a counting semaphore. Conceptually sending a value into the channel acquires a token and receiving a value from the channel releases the token, ensuring that at most n sends can occur without an intervening receive. Let’s have a look at an example:\nvar tokens = make(chan struct{}, 20) func doSomething() { tokens \u003c- struct{}{} // acquire the token // .. \u003c-tokens // release the token } Alternatively, you can use the golang semaphore package and call Acquire and Release on the semaphore that is equivalent of the token concept above.\nvar sem = semaphore.NewWeighted(int64(10)) sem.Acquire(ctx, 1) // equivalent to sem \u003c- 1 (using channel approach) sem.Release(1) // equivalent to \u003c- sem (using channel approach) There is a blog post that covers semaphore in greater detail here.\nMultiplexing with select \u0026 cancellation The select statement comes in handy when we need to wait for an event on one of the many channels. The select statement can be used with a ticker to run a loop every n seconds/minutes/hours as below:\nticker := time.NewTicker(5 * time.Second) go func() { for ... { // some operations select { case \u003c- ticker.C: case \u003c- done: return default: } } } Notice how we have a case for a receive operation on a done channel. That is useful when want the main goroutine to tell the other goroutines (above goroutine in this case) to abandon the values they are trying to send. Otherwise those goroutines with work left will be stuck trying to send their responses on a channel from which no goroutine will ever receive, leading to resource leak as mentioned earlier. In order for that to work, we will need to close the done channel at the end of the main() as done below:\nfunc main() { // Set up a done channel that's shared by the whole pipeline, // and close that channel when this pipeline exits, as a signal // for all the goroutines we started to exit done := make(chan struct{}) defer close(done) // some operations go func(done \u003c-chan struct{}){ ... }(done) // done will be closed by the deferred call } Here are a few other details about the multiplexing with the select statement that you might find useful:\nIf multiple cases are ready, select picks one at a random. If there is a case in the select statement where the channel can optionally be nil (depending on the flag passed in), the case is effectively disabled I hope this post has provided some context for you to get started with concurrency in Go. If you would like to learn more about them, make sure you check out Chapter 8: Goroutines and Channels of the Go Programming Language book as well as The Go Blog on Go Concurrency Patterns.\n",
+  "wordCount" : "1737",
+  "inLanguage": "en",
+  "datePublished": "2023-09-09T13:51:42-04:00",
+  "dateModified": "2023-09-09T13:51:42-04:00",
+  "author":{
+    "@type": "Person",
+    "name": "David Hwang"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://theplaybook.dev/docs/goroutines/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "theplaybook",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://theplaybook.dev/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="http://theplaybook.dev/" accesskey="h" title="theplaybook (Alt + H)">theplaybook</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://theplaybook.dev/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://theplaybook.dev/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://theplaybook.dev/archives/" title="Archives">
+                    <span>Archives</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title">
+      Demystifying Goroutines - Channels, WaitGroup, Cancellation
+    </h1>
+    <div class="post-meta"><span title='2023-09-09 13:51:42 -0400 -0400'>September 9, 2023</span>&nbsp;·&nbsp;9 min&nbsp;·&nbsp;David Hwang
+
+</div>
+  </header> 
+  <div class="post-content"><p>If you have rough ideas on how goroutines work but never took the time to learn the idiomatic approach and why we want to run goroutines certain way, this blog will be of help. In this post, I will be summarizing what I have learned from <code>Chapter 8: Goroutines and Channels</code> of the <a href="https://www.amazon.com/Programming-Language-Addison-Wesley-Professional-Computing/dp/0134190440/ref=sr_1_3?crid=1V7XV9DO61F4P&amp;keywords=go+programming+language&amp;qid=1694284272&amp;sprefix=go+programming+language%252Caps%252C88&amp;sr=8-3&amp;_encoding=UTF8&amp;tag=david95kr-20&amp;linkCode=ur2&amp;linkId=bdf8b2e5de3f2ca0ec02fb3581c2d74c&amp;camp=1789&amp;creative=9325">Go Programming Language</a> book as well as <a href="https://go.dev/blog/pipelines">The Go Blog on Go Concurrency Patterns</a>.</p>
+<p>This blog post will be helpful if you are not familiar with any of the below:</p>
+<ul>
+<li>How to wait for the other goroutines to finish instead of exiting on the main goroutine</li>
+<li>Unbuffered vs. buffered channels and the pros &amp; cons of each</li>
+<li>Running loops in parallel (goroutines inside the loop)</li>
+<li>Unbounded parallelism &amp; semaphores</li>
+<li>Multiplexing with <code>select</code> &amp; goroutine cancellation</li>
+</ul>
+<p>We will also answer some of the questions such as:</p>
+<ul>
+<li>What is a goroutine leak and how do we prevent it?</li>
+<li>Do we need to close all the channels and goroutines?</li>
+<li>Why do we want to have our waitGroup in its own goroutine?</li>
+</ul>
+<p>You should already know that a goroutine is an activity of a concurrent Go program and channel is a communicating mechanism between the goroutines. We all wish running a concurrent program is as simple as prepending <code>go</code> to a method. However, there is often a little more we need to make goroutines work as intended. Let&rsquo;s have a look at different use cases starting from the first bullet point on the list above.</p>
+<h3 id="how-to-wait-for-other-goroutines-to-finish-instead-of-exiting-on-the-main-goroutine">How to wait for other goroutines to finish instead of exiting on the main goroutine<a hidden class="anchor" aria-hidden="true" href="#how-to-wait-for-other-goroutines-to-finish-instead-of-exiting-on-the-main-goroutine">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">done</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{})
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">done</span> <span style="color:#f92672">&lt;-</span> <span style="color:#66d9ef">struct</span>{}{} <span style="color:#75715e">// signal the main goroutine
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }()
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">done</span> <span style="color:#75715e">// wait for background goroutine to finish 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>In the code snippet above, we define an unbuffered channel called <code>done</code>. The channel is unbuffered because we are not assigning any capacity/size to the channel. We will take a look at buffered channels in another example later. The main characteristic of an unbuffered channel is that it blocks until another goroutine executes a corresponding receive on the same channel, causing the sending and receiving goroutines to be &ldquo;synchronous&rdquo;. With the unbuffered channel in the example above, we can ensure that the program waits for the background goroutine to finish before exiting. You can find the code example from the book <a href="https://github.com/adonovan/gopl.io/blob/master/ch8/netcat3/netcat.go#L17-L31">here</a>.</p>
+<h3 id="unbuffered-vs-buffered-channels">Unbuffered vs. buffered channels<a hidden class="anchor" aria-hidden="true" href="#unbuffered-vs-buffered-channels">#</a></h3>
+<p>Let&rsquo;s have a look at an example from the book where an unbuffered channel might lead to a problem.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">mirroredQuery</span>() <span style="color:#66d9ef">string</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">responses</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">string</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() { <span style="color:#a6e22e">responses</span> <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;response 1&#34;</span> }()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() { <span style="color:#a6e22e">responses</span> <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;response 2&#34;</span> }()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() { <span style="color:#a6e22e">responses</span> <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;response 3&#34;</span> }()
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">responses</span> <span style="color:#75715e">// return the quickest response
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>With unbuffered channels, there might be a scenario like the above where the two slower goroutines (as to which of the three would be the fastest is non-deterministic) would be stuck trying to send their responses on a channel from which no goroutine will ever receive. This is known as a <code>goroutine leak</code> and it is important to ensure that the goroutines terminate themselves when no longer needed since leaked goroutines are not automatically collected.</p>
+<p>However, we would not encounter a <code>goroutine leak</code> if we use a buffered channel instead as such: <code>responses := make(chan string, 3)</code> where we assign a capacity of 3 to the channel. That buffered channel would hold up to three string values and block until a space is made available by another goroutine&rsquo;s receive. And even if the sending channel closes, the values queued up in the channel can be handled later by the receiving channels.</p>
+<p>Although unbuffered channels provide stronger synchronization guarantees, it would require prudence on our end to avoid goroutine leaks. If the synchronization does not matter as much and you know the upper bound on the number of values that will be sent on the channel, a buffered channel could be a better option. However, it is worth noting that failure to allocate sufficient buffer capacity would cause the program to deadlock.</p>
+<p>As we looked at an example of a goroutine leak, you might have also wondered if we have to close all the channels as well. The answer is that you do not need to close every channel unless it is important to tell the receiving goroutines that all data have been sent. Channels that the garbage collector determines to be unreachable will have its resources reclaimed whether or not it is closed. However, closing an already-closed channel causes a panic, as does closing a nil channel.</p>
+<h3 id="running-loops-in-parallel">Running loops in parallel<a hidden class="anchor" aria-hidden="true" href="#running-loops-in-parallel">#</a></h3>
+<p>At first glance, looping in parallel might appear to be as simple as:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">parallelLoop</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">filenames</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">f</span> <span style="color:#66d9ef">string</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		}(<span style="color:#a6e22e">f</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>However, when you run the function above, you will observe that the function exits almost immediately. The above doesn’t work because <code>parallelLoop()</code> returns before it has finished all its work. We have to change the inner goroutine to report its completion to the outer goroutine by sending an event on a shared channel as below:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">parallelLoop</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ch</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{})
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">filenames</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">f</span> <span style="color:#66d9ef">string</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#a6e22e">ch</span> <span style="color:#f92672">&lt;-</span> <span style="color:#66d9ef">struct</span>{}{}
+</span></span><span style="display:flex;"><span>		}(<span style="color:#a6e22e">f</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">filenames</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">ch</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>One other thing worth highlighting is that the <code>f</code> is passed into the goroutine as an explicit argument as such: <code>go func(f string){...}(f)</code> and not directly used in the goroutine. Explicit parameters are used for goroutines in a loop to ensure that we use the value of <code>f</code> that is current when the go statement is executed.</p>
+<p>However, the above example does not take error handling into consideration. Now let’s have a look at the idiomatic approach to looping in parallel using the <code>sync.WaitGroup</code> and handling errors appropriately:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">makeThumbnails</span>(<span style="color:#a6e22e">filesnames</span> <span style="color:#f92672">&lt;-</span><span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">int64</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sizes</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">int64</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">wg</span> <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">WaitGroup</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">filenames</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">f</span> <span style="color:#66d9ef">string</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Done</span>()
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// run operations to retrieve the size of the file
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#a6e22e">sizes</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">size</span>
+</span></span><span style="display:flex;"><span>		}(<span style="color:#a6e22e">f</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// closer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Wait</span>()
+</span></span><span style="display:flex;"><span>		close(<span style="color:#a6e22e">sizes</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">total</span> <span style="color:#66d9ef">int64</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">size</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">sizes</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">total</span> <span style="color:#f92672">+=</span> <span style="color:#a6e22e">size</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">total</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Above is a snippet of code where we retrieve the size of different files in parallel and compute the total size. The example used in the book can be found <a href="https://github.com/adonovan/gopl.io/blob/master/ch8/thumbnail/thumbnail_test.go#L117-L146">here</a>. There are a few things we want to pay attention from the above:</p>
+<ol>
+<li><code>wg.Add(1)</code> must be called before the worker goroutine starts, not within it—this ensures that the <code>Add</code> happens before the closer goroutine calls <code>Wait</code></li>
+<li>defer is used on <code>wg.Done()</code> to ensure that Done is called even in the error cases</li>
+<li>The closer goroutine that waits for the workers must be created before the closing of the sizes channel</li>
+<li>The closer goroutine must be concurrent with the loop over sizes
+<ul>
+<li>If the wait operation was placed before the loop in the main goroutine: it would never end</li>
+<li>If the wait operation was placed after the loop in the main goroutine: the loop would never terminate because there is nothing closing the <code>sizes</code> channel and the wait operation will be unreachable</li>
+</ul>
+</li>
+</ol>
+<h3 id="unbounded-parallelism">Unbounded parallelism<a hidden class="anchor" aria-hidden="true" href="#unbounded-parallelism">#</a></h3>
+<p>If there is a limiting factor in the system, such as the number of CPU cores, the number of spindles and heads for local disk I/O operations, or the bandwidth of the network, we want to limit the number of parallel uses of the resource to match the level of parallelism that is available.</p>
+<p>We can limit parallelism using a buffered channel of capacity <code>n</code> to model a concurrency primitive called a <code>counting semaphore</code>. Conceptually sending a value into the channel acquires a token and receiving a value from the channel releases the token, ensuring that at most n sends can occur without an intervening receive. Let&rsquo;s have a look at an example:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">tokens</span> = make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}, <span style="color:#ae81ff">20</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">doSomething</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">tokens</span> <span style="color:#f92672">&lt;-</span> <span style="color:#66d9ef">struct</span>{}{} <span style="color:#75715e">// acquire the token
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// ..
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">tokens</span> <span style="color:#75715e">// release the token
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>Alternatively, you can use the golang <a href="https://pkg.go.dev/golang.org/x/sync/semaphore">semaphore package</a> and call <code>Acquire</code> and <code>Release</code> on the semaphore that is equivalent of the token concept above.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">sem</span> = <span style="color:#a6e22e">semaphore</span>.<span style="color:#a6e22e">NewWeighted</span>(int64(<span style="color:#ae81ff">10</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">sem</span>.<span style="color:#a6e22e">Acquire</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#ae81ff">1</span>) <span style="color:#75715e">// equivalent to sem &lt;- 1 (using channel approach)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">sem</span>.<span style="color:#a6e22e">Release</span>(<span style="color:#ae81ff">1</span>) <span style="color:#75715e">// equivalent to &lt;- sem (using channel approach)
+</span></span></span></code></pre></div><p>There is a blog post that covers semaphore in greater detail <a href="https://medium.com/@deckarep/gos-extended-concurrency-semaphores-part-1-5eeabfa351ce">here</a>.</p>
+<h3 id="multiplexing-with-select--cancellation">Multiplexing with select &amp; cancellation<a hidden class="anchor" aria-hidden="true" href="#multiplexing-with-select--cancellation">#</a></h3>
+<p>The select statement comes in handy when we need to wait for an event on one of the many channels. The select statement can be used with a ticker to run a loop every n seconds/minutes/hours as below:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#a6e22e">ticker</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">NewTicker</span>(<span style="color:#ae81ff">5</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#f92672">...</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// some operations
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">select</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">ticker</span>.<span style="color:#a6e22e">C</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">done</span>:
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">default</span>:
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Notice how we have a case for a receive operation on a <code>done</code> channel. That is useful when want the main goroutine to tell the other goroutines (above goroutine in this case) to abandon the values they are trying to send. Otherwise those goroutines with work left will be stuck trying to send their responses on a channel from which no goroutine will ever receive, leading to resource leak as mentioned earlier. In order for that to work, we will need to close the done channel at the end of the <code>main()</code> as done below:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Set up a done channel that&#39;s shared by the whole pipeline,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// and close that channel when this pipeline exits, as a signal
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// for all the goroutines we started to exit
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">done</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{})
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">defer</span> close(<span style="color:#a6e22e">done</span>)          
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// some operations
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">done</span> <span style="color:#f92672">&lt;-</span><span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}){
+</span></span><span style="display:flex;"><span>			<span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>		}(<span style="color:#a6e22e">done</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// done will be closed by the deferred call
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>Here are a few other details about the multiplexing with the <code>select</code> statement that you might find useful:</p>
+<ul>
+<li>If multiple cases are ready, <code>select</code> picks one at a random.</li>
+<li>If there is a case in the select statement where the channel can optionally be nil (depending on the flag passed in), the case is effectively disabled</li>
+</ul>
+<p>I hope this post has provided some context for you to get started with concurrency in Go. If you would like to learn more about them, make sure you check out <code>Chapter 8: Goroutines and Channels</code> of the <a href="https://www.amazon.com/Programming-Language-Addison-Wesley-Professional-Computing/dp/0134190440/ref=sr_1_3?crid=1V7XV9DO61F4P&amp;keywords=go+programming+language&amp;qid=1694284272&amp;sprefix=go+programming+language%252Caps%252C88&amp;sr=8-3&amp;_encoding=UTF8&amp;tag=david95kr-20&amp;linkCode=ur2&amp;linkId=bdf8b2e5de3f2ca0ec02fb3581c2d74c&amp;camp=1789&amp;creative=9325">Go Programming Language</a> book as well as <a href="https://go.dev/blog/pipelines">The Go Blog on Go Concurrency Patterns</a>.</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="http://theplaybook.dev/tags/golang/">golang</a></li>
+      <li><a href="http://theplaybook.dev/tags/goroutine/">goroutine</a></li>
+      <li><a href="http://theplaybook.dev/tags/go-channel/">go channel</a></li>
+    </ul>
+
+<div class="share-buttons">
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Demystifying Goroutines - Channels, WaitGroup, Cancellation on twitter"
+        href="https://twitter.com/intent/tweet/?text=Demystifying%20Goroutines%20-%20Channels%2c%20WaitGroup%2c%20Cancellation&amp;url=http%3a%2f%2ftheplaybook.dev%2fdocs%2fgoroutines%2f&amp;hashtags=golang%2cgoroutine%2cgochannel">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-253.927,424.544c135.939,0 210.268,-112.643 210.268,-210.268c0,-3.218 0,-6.437 -0.153,-9.502c14.406,-10.421 26.973,-23.448 36.935,-38.314c-13.18,5.824 -27.433,9.809 -42.452,11.648c15.326,-9.196 26.973,-23.602 32.49,-40.92c-14.252,8.429 -30.038,14.56 -46.896,17.931c-13.487,-14.406 -32.644,-23.295 -53.946,-23.295c-40.767,0 -73.87,33.104 -73.87,73.87c0,5.824 0.613,11.494 1.992,16.858c-61.456,-3.065 -115.862,-32.49 -152.337,-77.241c-6.284,10.881 -9.962,23.601 -9.962,37.088c0,25.594 13.027,48.276 32.95,61.456c-12.107,-0.307 -23.448,-3.678 -33.41,-9.196l0,0.92c0,35.862 25.441,65.594 59.311,72.49c-6.13,1.686 -12.72,2.606 -19.464,2.606c-4.751,0 -9.348,-0.46 -13.946,-1.38c9.349,29.426 36.628,50.728 68.965,51.341c-25.287,19.771 -57.164,31.571 -91.8,31.571c-5.977,0 -11.801,-0.306 -17.625,-1.073c32.337,21.15 71.264,33.41 112.95,33.41Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Demystifying Goroutines - Channels, WaitGroup, Cancellation on linkedin"
+        href="https://www.linkedin.com/shareArticle?mini=true&amp;url=http%3a%2f%2ftheplaybook.dev%2fdocs%2fgoroutines%2f&amp;title=Demystifying%20Goroutines%20-%20Channels%2c%20WaitGroup%2c%20Cancellation&amp;summary=Demystifying%20Goroutines%20-%20Channels%2c%20WaitGroup%2c%20Cancellation&amp;source=http%3a%2f%2ftheplaybook.dev%2fdocs%2fgoroutines%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Demystifying Goroutines - Channels, WaitGroup, Cancellation on reddit"
+        href="https://reddit.com/submit?url=http%3a%2f%2ftheplaybook.dev%2fdocs%2fgoroutines%2f&title=Demystifying%20Goroutines%20-%20Channels%2c%20WaitGroup%2c%20Cancellation">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Demystifying Goroutines - Channels, WaitGroup, Cancellation on facebook"
+        href="https://facebook.com/sharer/sharer.php?u=http%3a%2f%2ftheplaybook.dev%2fdocs%2fgoroutines%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Demystifying Goroutines - Channels, WaitGroup, Cancellation on whatsapp"
+        href="https://api.whatsapp.com/send?text=Demystifying%20Goroutines%20-%20Channels%2c%20WaitGroup%2c%20Cancellation%20-%20http%3a%2f%2ftheplaybook.dev%2fdocs%2fgoroutines%2f">
+        <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+        </svg>
+    </a>
+    <a target="_blank" rel="noopener noreferrer" aria-label="share Demystifying Goroutines - Channels, WaitGroup, Cancellation on telegram"
+        href="https://telegram.me/share/url?text=Demystifying%20Goroutines%20-%20Channels%2c%20WaitGroup%2c%20Cancellation&amp;url=http%3a%2f%2ftheplaybook.dev%2fdocs%2fgoroutines%2f">
+        <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28" height="30px" width="30px" fill="currentColor">
+            <path
+                d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+        </svg>
+    </a>
+</div>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2023 <a href="http://theplaybook.dev/">theplaybook</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>
