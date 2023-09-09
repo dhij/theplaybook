@@ -6,7 +6,7 @@ tags: ["golang", "goroutine", "go channel"]
 categories: ["go"]
 ---
 
-If you have rough ideas on how goroutines work but never took the time to learn the idiomatic approach and why we want to run goroutines certain way, this blog will be of help. In this post, I will be summarizing what I have learned from `Chapter 8: Goroutines and Channels` of the [Go Programming Language](https://www.amazon.com/Programming-Language-Addison-Wesley-Professional-Computing/dp/0134190440/ref=sr_1_3?crid=1V7XV9DO61F4P&keywords=go+programming+language&qid=1694284272&sprefix=go+programming+language%252Caps%252C88&sr=8-3&_encoding=UTF8&tag=david95kr-20&linkCode=ur2&linkId=bdf8b2e5de3f2ca0ec02fb3581c2d74c&camp=1789&creative=9325) book as well as [The Go Blog on Go Concurrency Patterns](https://go.dev/blog/pipelines).
+If you have rough ideas on how goroutines work but never took the time to learn the idiomatic approach and why we want to run goroutines certain way, this blog will be of help. In this post, I will be summarizing what I have learned from `Chapter 8: Goroutines and Channels` of the [Go Programming Language](https://amzn.to/45LKKfM) book as well as [The Go Blog on Go Concurrency Patterns](https://go.dev/blog/pipelines).
 
 This blog post will be helpful if you are not familiar with any of the below:
 - How to wait for the other goroutines to finish instead of exiting on the main goroutine
@@ -204,4 +204,4 @@ Here are a few other details about the multiplexing with the `select` statement 
 - If multiple cases are ready, `select` picks one at a random.
 - If there is a case in the select statement where the channel can optionally be nil (depending on the flag passed in), the case is effectively disabled
 
-I hope this post has provided some context for you to get started with concurrency in Go. If you would like to learn more about them, make sure you check out `Chapter 8: Goroutines and Channels` of the [Go Programming Language](https://www.amazon.com/Programming-Language-Addison-Wesley-Professional-Computing/dp/0134190440/ref=sr_1_3?crid=1V7XV9DO61F4P&keywords=go+programming+language&qid=1694284272&sprefix=go+programming+language%252Caps%252C88&sr=8-3&_encoding=UTF8&tag=david95kr-20&linkCode=ur2&linkId=bdf8b2e5de3f2ca0ec02fb3581c2d74c&camp=1789&creative=9325) book as well as [The Go Blog on Go Concurrency Patterns](https://go.dev/blog/pipelines).
+I hope this post has provided some context for you to get started with concurrency in Go. If you would like to learn more about them, make sure you check out `Chapter 8: Goroutines and Channels` of the [Go Programming Language](https://amzn.to/45LKKfM) book as well as [The Go Blog on Go Concurrency Patterns](https://go.dev/blog/pipelines).
