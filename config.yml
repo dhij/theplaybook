@@ -12,23 +12,7 @@ params:
     Content: >
       Welcome to the **dev playbook** 🎉
 
-      - This space shares step-by-step guides for devs to building different backend/infra projects 🙂
-
-      - 
-
-      - Tin-can projects that I will be working on include but are not limited to:
-
-      - • API with Swagger 2.0 in Go
-
-      - • Secure Authentication with Refresh Token
-
-      - • Terraform Module that deploys a Lambda + API Gateway
-
-      - • Deployment of CI/CD server like Jenkins to EC2 autoscaling groups
-
-      - • Kubernetes Cluster with Prometheus and Grafana
-
-      - • + many others from different categories
+      - This is a space where I will mostly be sharing about Go & Kubernetes 🙂
 
   socialIcons:
     - name: Github
